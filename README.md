@@ -1,17 +1,18 @@
 # respmask
 
-`respmask` is a Go middleware for dynamically masking specific fields in JSON responses.
+`respmask` is a Go middleware designed to dynamically mask specific fields in JSON responses, catering to the diverse needs of modern APIs dealing with sensitive data.
 
 ## Motivation
 
-While working with APIs that deal with sensitive data, it becomes crucial to mask specific fields in the response without altering the actual data model. The aim of `respmask` is to provide a simple and efficient way to dynamically mask any field in the response based on the context of the request.
+In the world of APIs, especially those that handle sensitive or private data, it's imperative to mask certain response fields without altering the actual data model. `respmask` offers a seamless solution, allowing developers to apply dynamic masking depending on the context of the request.
 
 ## Features
 
-- **Dynamic Masking Rules**: Define masking functions on the fly based on request context.
-- **Recursive Masking**: Traverse and mask nested JSON objects and arrays.
-- **Extendable**: Easily extend with custom masking functions for different use cases.
-- **Predefined Masking Rules**: Out-of-the-box support for common masking scenarios like emails, passwords, phone numbers, and credit card numbers.
+- **Dynamic Masking Rules**: Define and adapt masking functions based on request context.
+- **Masking Modes**: Switch between `ExactMode` and `RecursiveMode` for granular control over response data masking.
+- **Recursive Masking**: Efficiently traverse and mask nested JSON objects and arrays.
+- **Extendability**: Craft custom masking functions tailored to specific use cases.
+- **Predefined Masking Rules**: Benefit from built-in rules for typical masking scenarios, including emails, passwords, phone numbers, and credit card numbers.
 
 ## Installation
 
@@ -23,7 +24,7 @@ go get github.com/timakin/respmask
 
 ### Basic Usage with Default Masking Rules
 
-1. Use the provided default masking rules.
+1. Leverage the in-built default masking rules.
 
 ```go
 import "github.com/timakin/respmask"
@@ -32,51 +33,60 @@ func dynamicKeysAndMaskingFuncs(r *http.Request) map[string]respmask.MaskingFunc
     return map[string]respmask.MaskingFunc{
         "email":    respmask.DefaultMaskingRules[respmask.EmailMasking],
         "password": respmask.DefaultMaskingRules[respmask.PasswordMasking],
-        // ... use other default masking functions as needed ...
+        // ... include other default masking functions as required ...
     }
 }
 ```
 
-2. Set up the middleware with your HTTP server.
+2. Integrate the middleware with your HTTP server and choose a masking mode.
 
 ```go
 func main() {
-	http.Handle("/api/data", respmask.NewMaskingMiddleware(dynamicKeysAndMaskingFuncs, http.HandlerFunc(handleData)))
+	http.Handle("/api/data", respmask.NewMaskingMiddleware(dynamicKeysAndMaskingFuncs, respmask.ExactMode, http.HandlerFunc(handleData)))
 	http.ListenAndServe(":8080", nil)
 }
 ```
 
-3. Watch specific fields in your JSON responses get masked using the predefined rules!
+3. Observe specified fields in your JSON responses being masked according to predefined rules!
 
-### Custom Masking Functions
+### Masking Modes
 
-You can easily extend the functionality by defining your own masking functions.
+`respmask` offers two distinct masking modes:
+
+- **ExactMode**: Masks keys strictly based on the hierarchy defined in dynamicKeysAndMaskingFuncs.
+- **RecursiveMode**: Masks keys throughout the JSON structure, regardless of their depth.
+
+For instance, given a masking function that targets the key "email" with `ExactMode` selected, only the top-level "email" key will be masked. On the other hand, with `RecursiveMode`, "email" keys across all nesting levels will be masked.
+
+### Crafting Custom Masking Functions
+
+Design your custom masking functions with ease.
 
 ```go
 func customMaskFunc(input string) string {
-    // Your custom masking logic
+    // Your unique masking logic here
     return "masked_value"
 }
 ```
 
-Then, use your custom function in the dynamic keys function:
+Subsequently, employ your custom function in the dynamic keys definition:
 
 ```go
 func dynamicKeysAndMaskingFuncs(r *http.Request) map[string]respmask.MaskingFunc {
     return map[string]respmask.MaskingFunc{
         "custom_field": customMaskFunc,
-        // ... other fields and functions ...
+        // ... other fields and their corresponding functions ...
     }
 }
 ```
 
 ## Testing
 
-Refer to the provided test cases in the package to see how to effectively test the masking functionality.
+Refer to the in-package test cases for insights on how to effectively test the masking functionality.
 
 ## Contributing
 
 1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Make your changes.
-4. Push to your fork and submit a pull request!
+2. Initiate a new branch for your feature or bugfix.
+3. Implement your changes.
+4. Push to your fork and open a pull request!

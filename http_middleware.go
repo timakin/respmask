@@ -7,19 +7,19 @@ import (
 )
 
 type MaskingMiddleware struct {
-	keysAndMaskFuncs func(r *http.Request) map[string]MaskingFunc
-	next             http.Handler
+	keysAndModeFunc func(r *http.Request) (map[string]MaskingFunc, MaskingMode)
+	next            http.Handler
 }
 
-func NewMaskingMiddleware(keysAndMaskFuncs func(r *http.Request) map[string]MaskingFunc, next http.Handler) *MaskingMiddleware {
+func NewMaskingMiddleware(keysAndModeFunc func(r *http.Request) (map[string]MaskingFunc, MaskingMode), next http.Handler) *MaskingMiddleware {
 	return &MaskingMiddleware{
-		keysAndMaskFuncs: keysAndMaskFuncs,
-		next:             next,
+		keysAndModeFunc: keysAndModeFunc,
+		next:            next,
 	}
 }
 
 func (m *MaskingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	keysFuncs := m.keysAndMaskFuncs(r)
+	keysFuncs, mode := m.keysAndModeFunc(r)
 
 	recorder := &responseRecorder{
 		ResponseWriter: w,
@@ -41,7 +41,7 @@ func (m *MaskingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	MaskData(data, keysFuncs)
+	Mask(data, keysFuncs, mode)
 	maskedBytes, _ := json.Marshal(data)
 	w.Write(maskedBytes)
 }

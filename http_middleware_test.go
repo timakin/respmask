@@ -19,12 +19,20 @@ func TestMiddleware(t *testing.T) {
 	tests := []struct {
 		name         string
 		endpoint     string
+		mode         respmask.MaskingMode
 		expectedBody string
 	}{
 		{
 			name:         "masking email and password for /api/data endpoint",
 			endpoint:     "/api/data",
+			mode:         respmask.ExactMode,
 			expectedBody: `{"email":"t***@example.com","password":"**********"}`,
+		},
+		{
+			name:         "all levels masking for nested data",
+			endpoint:     "/api/nested-data",
+			mode:         respmask.RecursiveMode,
+			expectedBody: `{"email":"t***@example.com","profile":{"user":{"email":"n***@example.com"}}}`,
 		},
 	}
 
@@ -51,6 +59,7 @@ func TestMiddleware(t *testing.T) {
 func apiHandler() http.Handler {
 	apiMux := http.NewServeMux()
 	apiMux.Handle("/data", http.HandlerFunc(handleSuccessCase))
+	apiMux.Handle("/nested-data", http.HandlerFunc(handleNestedData))
 	return apiMux
 }
 
@@ -65,14 +74,34 @@ func handleSuccessCase(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func dynamicKeysToMask(r *http.Request) map[string]respmask.MaskingFunc {
+func handleNestedData(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{
+		"email": "test@example.com",
+		"profile": map[string]interface{}{
+			"user": map[string]interface{}{
+				"email": "nesteduser@example.com",
+			},
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(data)
+}
+
+func dynamicKeysToMask(r *http.Request) (map[string]respmask.MaskingFunc, respmask.MaskingMode) {
 	switch r.URL.Path {
 	case "/api/data":
 		return map[string]respmask.MaskingFunc{
 			"email":    respmask.DefaultMaskingRules[respmask.EmailMasking],
 			"password": respmask.DefaultMaskingRules[respmask.PasswordMasking],
-		}
+		}, respmask.ExactMode
+	case "/api/nested-data":
+		return map[string]respmask.MaskingFunc{
+			"email":              respmask.DefaultMaskingRules[respmask.EmailMasking],
+			"profile.user.email": respmask.DefaultMaskingRules[respmask.EmailMasking],
+		}, respmask.RecursiveMode
 	default:
-		return map[string]respmask.MaskingFunc{}
+		return map[string]respmask.MaskingFunc{}, respmask.ExactMode
 	}
 }

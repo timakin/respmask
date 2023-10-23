@@ -4,6 +4,13 @@ import (
 	"strings"
 )
 
+type MaskingMode = string
+
+const (
+	ExactMode     MaskingMode = "ExactMode"
+	RecursiveMode MaskingMode = "RecursiveMode"
+)
+
 type MaskingFunc func(input string) string
 
 type MaskingRuleType = string
@@ -32,24 +39,63 @@ var DefaultMaskingRules = map[MaskingRuleType]MaskingFunc{
 	},
 }
 
-func traverseAndMask(node interface{}, keysAndMaskFuncs map[string]MaskingFunc) {
+func traverseAndMaskExact(node interface{}, keysAndMaskFuncs map[string]MaskingFunc, nestedKeys ...string) {
 	switch v := node.(type) {
 	case map[string]interface{}:
 		for key, value := range v {
-			if maskFunc, ok := keysAndMaskFuncs[key]; ok {
+			currentPath := append(nestedKeys, key)
+			joinedPath := strings.Join(currentPath, ".")
+
+			if maskFunc, ok := keysAndMaskFuncs[joinedPath]; ok {
 				if strVal, ok := value.(string); ok {
 					v[key] = maskFunc(strVal)
 				}
 			}
-			traverseAndMask(value, keysAndMaskFuncs)
+			traverseAndMaskExact(value, keysAndMaskFuncs, currentPath...)
 		}
 	case []interface{}:
-		for _, item := range v {
-			traverseAndMask(item, keysAndMaskFuncs)
+		for index, item := range v {
+			if subMap, ok := item.(map[string]interface{}); ok {
+				traverseAndMaskExact(subMap, keysAndMaskFuncs, nestedKeys...)
+			} else if strVal, ok := item.(string); ok {
+				joinedPath := strings.Join(nestedKeys, ".")
+				if maskFunc, ok := keysAndMaskFuncs[joinedPath]; ok {
+					v[index] = maskFunc(strVal)
+				}
+			}
 		}
 	}
 }
 
-func MaskData(data map[string]interface{}, keysAndMaskFuncs map[string]MaskingFunc) {
-	traverseAndMask(data, keysAndMaskFuncs)
+func traverseAndMaskAllLevels(data map[string]interface{}, keysAndMaskFuncs map[string]MaskingFunc) {
+	for k, v := range data {
+		if maskFunc, exists := keysAndMaskFuncs[k]; exists {
+			if strVal, ok := v.(string); ok {
+				data[k] = maskFunc(strVal)
+			}
+		}
+
+		switch value := v.(type) {
+		case map[string]interface{}:
+			traverseAndMaskAllLevels(value, keysAndMaskFuncs)
+		case []interface{}:
+			for i, item := range value {
+				if submap, ok := item.(map[string]interface{}); ok {
+					traverseAndMaskAllLevels(submap, keysAndMaskFuncs)
+					value[i] = submap
+				}
+			}
+		}
+	}
+}
+
+func Mask(data map[string]interface{}, keysAndMaskFuncs map[string]MaskingFunc, mode string) {
+	switch mode {
+	case ExactMode:
+		traverseAndMaskExact(data, keysAndMaskFuncs)
+	case RecursiveMode:
+		traverseAndMaskAllLevels(data, keysAndMaskFuncs)
+	default:
+		panic("invalid masking mode")
+	}
 }
