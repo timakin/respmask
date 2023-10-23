@@ -28,20 +28,22 @@ func (m *MaskingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	m.next.ServeHTTP(recorder, r)
 
-	if recorder.statusCode >= 200 && recorder.statusCode < 300 {
-		bodyBytes := recorder.body.Bytes()
-		var data map[string]interface{}
-
-		if err := json.Unmarshal(bodyBytes, &data); err == nil {
-			MaskData(data, keysFuncs)
-			maskedBytes, _ := json.Marshal(data)
-			w.Write(maskedBytes)
-		} else {
-			w.Write(bodyBytes)
-		}
-	} else {
+	if recorder.statusCode < 200 || recorder.statusCode >= 300 {
 		w.Write(recorder.body.Bytes())
+		return
 	}
+
+	bodyBytes := recorder.body.Bytes()
+	var data map[string]interface{}
+
+	if err := json.Unmarshal(bodyBytes, &data); err != nil {
+		w.Write(bodyBytes)
+		return
+	}
+
+	MaskData(data, keysFuncs)
+	maskedBytes, _ := json.Marshal(data)
+	w.Write(maskedBytes)
 }
 
 type responseRecorder struct {
