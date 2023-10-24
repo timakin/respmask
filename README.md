@@ -1,3 +1,5 @@
+![test workflow](https://github.com/timakin/respmask/actions/workflows/test.yml/badge.svg)
+
 # respmask
 
 `respmask` is a Go middleware designed to dynamically mask specific fields in JSON responses, catering to the diverse needs of modern APIs dealing with sensitive data.
