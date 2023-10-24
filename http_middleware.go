@@ -7,19 +7,19 @@ import (
 )
 
 type MaskingMiddleware struct {
-	keysAndModeFunc func(r *http.Request) (map[string]MaskingFunc, MaskingMode)
-	next            http.Handler
+	config func(r *http.Request) (map[string]MaskingFunc, MaskingMode)
+	next   http.Handler
 }
 
-func NewMaskingMiddleware(keysAndModeFunc func(r *http.Request) (map[string]MaskingFunc, MaskingMode), next http.Handler) *MaskingMiddleware {
+func NewMaskingMiddleware(config func(r *http.Request) (map[string]MaskingFunc, MaskingMode), next http.Handler) *MaskingMiddleware {
 	return &MaskingMiddleware{
-		keysAndModeFunc: keysAndModeFunc,
-		next:            next,
+		config: config,
+		next:   next,
 	}
 }
 
 func (m *MaskingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	keysFuncs, mode := m.keysAndModeFunc(r)
+	keysFuncs, mode := m.config(r)
 
 	recorder := &responseRecorder{
 		ResponseWriter: w,

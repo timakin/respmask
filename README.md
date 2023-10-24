@@ -29,12 +29,12 @@ go get github.com/timakin/respmask
 ```go
 import "github.com/timakin/respmask"
 
-func dynamicKeysAndMaskingFuncs(r *http.Request) map[string]respmask.MaskingFunc {
+func maskingConfig(r *http.Request) (map[string]respmask.MaskingFunc, respmask.MaskingMode) {
     return map[string]respmask.MaskingFunc{
         "email":    respmask.DefaultMaskingRules[respmask.EmailMasking],
         "password": respmask.DefaultMaskingRules[respmask.PasswordMasking],
-        // ... include other default masking functions as required ...
-    }
+        // ... use other default masking functions as needed ...
+    }, respmask.RecursiveMode
 }
 ```
 
@@ -42,8 +42,8 @@ func dynamicKeysAndMaskingFuncs(r *http.Request) map[string]respmask.MaskingFunc
 
 ```go
 func main() {
-	http.Handle("/api/data", respmask.NewMaskingMiddleware(dynamicKeysAndMaskingFuncs, respmask.ExactMode, http.HandlerFunc(handleData)))
-	http.ListenAndServe(":8080", nil)
+    http.Handle("/api/data", respmask.NewMaskingMiddleware(maskingConfig, http.HandlerFunc(handleData)))
+    http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -72,11 +72,11 @@ func customMaskFunc(input string) string {
 Subsequently, employ your custom function in the dynamic keys definition:
 
 ```go
-func dynamicKeysAndMaskingFuncs(r *http.Request) map[string]respmask.MaskingFunc {
+func maskingConfig(r *http.Request) (map[string]respmask.MaskingFunc, respmask.MaskingMode) {
     return map[string]respmask.MaskingFunc{
         "custom_field": customMaskFunc,
-        // ... other fields and their corresponding functions ...
-    }
+        // ... other fields and functions ...
+    }, respmask.RecursiveMode
 }
 ```
 
