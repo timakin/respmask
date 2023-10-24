@@ -53,7 +53,7 @@ func main() {
 
 `respmask` offers two distinct masking modes:
 
-- **ExactMode**: Masks keys strictly based on the hierarchy defined in dynamicKeysAndMaskingFuncs.
+- **ExactMode**: Masks keys strictly based on the hierarchy defined in configuration.
 - **RecursiveMode**: Masks keys throughout the JSON structure, regardless of their depth.
 
 For instance, given a masking function that targets the key "email" with `ExactMode` selected, only the top-level "email" key will be masked. On the other hand, with `RecursiveMode`, "email" keys across all nesting levels will be masked.
